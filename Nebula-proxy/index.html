@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nebula | Proxy</title>
+    <link rel="stylesheet" href="/index.css">
+
+    <script src="https://cdn.jsdelivr.net/npm/@mercuryworkshop/bare-mux@2.1.8/dist/index.js"></script>
+    <script src="/scram/scramjet.codecs.js"></script>
+    <script src="/scram/scramjet.config.js"></script>
+    <script src="/scram/scramjet.all.js"></script>
+    
+    <script src="/js/register-sw.js" defer></script>
+    <script src="/js/search.js" defer></script>
+</head>
+<body style="background: #0b0e14; color: white; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; font-family: sans-serif;">
+
+    <div class="container" style="text-align: center;">
+        <h1 style="letter-spacing: 5px; font-size: 3rem; margin-bottom: 20px;">NEBULA</h1>
+        <form id="proxy-form" style="display: flex; gap: 10px; margin-bottom: 20px; justify-content: center;">
+            <input type="text" id="proxy-search" placeholder="Enter URL..." autocomplete="off" style="padding: 12px; border-radius: 8px; border: 1px solid #333; background: #1a1d23; color: white; width: 300px;">
+            <button type="submit" style="padding: 12px 24px; background: #7289da; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold;">Launch</button>
+        </form>
+        <p id="status-text" style="color: #888; font-size: 0.9em;">Synchronizing Engine...</p>
+    </div>
+
+<script>
+    async function bootNebula() {
+    const status = document.getElementById('status-text');
+    const root = window.location.origin;
+
+    try {
+        if ('serviceWorker' in navigator) {
+            status.innerText = "Igniting Engine...";
+            
+            // Registration is handled by register-sw.js, so we just wait for it here
+            const registration = await navigator.serviceWorker.ready;
+            
+            // If the controller is missing, we need to wait/reload
+            if (!navigator.serviceWorker.controller) {
+                status.innerText = "Engine Warming Up... Reloading.";
+                location.reload();
+                return;
+            }
+
+            const handshake = () => new Promise((resolve) => {
+                const channel = new MessageChannel();
+                channel.port1.onmessage = (e) => { 
+                    if (e.data && e.data.type === "NEBULA_PONG") resolve(true); 
+                };
+                navigator.serviceWorker.controller.postMessage({ type: "NEBULA_PING" }, [channel.port2]);
+                setTimeout(() => resolve(false), 800);
+            });
+
+            // Handshake Loop
+            let ready = false;
+            let attempts = 0;
+            while (!ready && attempts < 10) {
+                status.innerText = `Syncing Database (${attempts}/10)...`;
+                ready = await handshake();
+                if (!ready) await new Promise(r => setTimeout(r, 1000));
+                attempts++;
+            }
+
+            if (!ready) throw new Error("Service Worker Handshake Timed Out");
+        }
+
+        status.innerText = "Connecting Transport...";
+        const connection = new BareMux.BareMuxConnection(`${root}/baremux/worker.js`);
+        await connection.setTransport(`${root}/scram/scramjet.all.js`, [{ 
+            wisp: "wss://wisp.mercuryworkshop.me/" 
+        }]);
+
+        const { ScramjetController } = $scramjetLoadController();
+        const scramjet = new ScramjetController({
+            files: {
+                wasm: `${root}/scram/scramjet.wasm.wasm`,
+                all: `${root}/scram/scramjet.all.js`,
+                config: `${root}/scram/scramjet.config.js`
+            }
+        });
+
+        await scramjet.init();
+        status.innerText = "🚀 System Online";
+        status.style.color = "#00ff00";
+
+    } catch (err) {
+        console.error("Boot Failure:", err);
+        status.innerText = "Repairing Engine... Please wait.";
+        
+        // Final fallback: Clear the specific broken DB and try again
+        await indexedDB.deleteDatabase('__scramjet_db');
+        setTimeout(() => location.reload(), 2000);
+    }
+}
+
+    window.addEventListener('load', () => {
+        bootNebula();
+    });
+</script>
+</body>
+</html>

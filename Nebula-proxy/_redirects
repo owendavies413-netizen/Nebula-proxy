@@ -1,0 +1,10 @@
+# Do NOT redirect the service worker or the engine files
+/sw.js                -    200
+/scram/* -    200
+/baremux/* -    200
+
+# Handle the proxy routes
+/service/* /index.html   200
+
+# Everything else goes to index
+/* /index.html   200

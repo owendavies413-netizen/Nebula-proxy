@@ -1,0 +1,6 @@
+/sw.js
+  Cache-Control: no-cache, no-store, must-revalidate
+  Service-Worker-Allowed: /
+
+/js/register-sw.js
+  Cache-Control: no-cache, no-store, must-revalidate

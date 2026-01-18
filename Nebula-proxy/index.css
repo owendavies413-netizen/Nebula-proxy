@@ -1,0 +1,59 @@
+:root {
+    --bg: #0b0b0e;
+    --accent: #7d5fff;
+    --text: #ffffff;
+}
+
+body {
+    background-color: var(--bg);
+    color: var(--text);
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    overflow: hidden;
+}
+
+.container {
+    text-align: center;
+    z-index: 10;
+}
+
+h1 {
+    font-size: 3rem;
+    letter-spacing: 5px;
+    text-transform: uppercase;
+    margin-bottom: 20px;
+}
+
+#proxy-form input {
+    background: rgba(255, 255, 255, 0.05);
+    border: 2px solid var(--accent);
+    padding: 15px 25px;
+    color: white;
+    border-radius: 30px;
+    width: 350px;
+    outline: none;
+    transition: 0.3s;
+}
+
+#proxy-form input:focus {
+    box-shadow: 0 0 20px var(--accent);
+}
+
+#proxy-form button {
+    background: var(--accent);
+    border: none;
+    padding: 15px 30px;
+    color: white;
+    border-radius: 30px;
+    margin-left: 10px;
+    cursor: pointer;
+    font-weight: bold;
+}
+
+#proxy-form button:hover {
+    transform: scale(1.05);
+}
