@@ -26,54 +26,33 @@
     </div>
 
 <script>
-    async function bootNebula() {
+async function bootNebula() {
     const status = document.getElementById('status-text');
     const root = window.location.origin;
 
     try {
         if ('serviceWorker' in navigator) {
             status.innerText = "Igniting Engine...";
+            await navigator.serviceWorker.ready;
             
-            // Registration is handled by register-sw.js, so we just wait for it here
-            const registration = await navigator.serviceWorker.ready;
-            
-            // If the controller is missing, we need to wait/reload
             if (!navigator.serviceWorker.controller) {
-                status.innerText = "Engine Warming Up... Reloading.";
+                status.innerText = "Syncing... Refreshing.";
                 location.reload();
                 return;
             }
-
-            const handshake = () => new Promise((resolve) => {
-                const channel = new MessageChannel();
-                channel.port1.onmessage = (e) => { 
-                    if (e.data && e.data.type === "NEBULA_PONG") resolve(true); 
-                };
-                navigator.serviceWorker.controller.postMessage({ type: "NEBULA_PING" }, [channel.port2]);
-                setTimeout(() => resolve(false), 800);
-            });
-
-            // Handshake Loop
-            let ready = false;
-            let attempts = 0;
-            while (!ready && attempts < 10) {
-                status.innerText = `Syncing Database (${attempts}/10)...`;
-                ready = await handshake();
-                if (!ready) await new Promise(r => setTimeout(r, 1000));
-                attempts++;
-            }
-
-            if (!ready) throw new Error("Service Worker Handshake Timed Out");
         }
 
         status.innerText = "Connecting Transport...";
         const connection = new BareMux.BareMuxConnection(`${root}/baremux/worker.js`);
+        
+        // This links BareMux and Scramjet
         await connection.setTransport(`${root}/scram/scramjet.all.js`, [{ 
             wisp: "wss://wisp.mercuryworkshop.me/" 
         }]);
 
         const { ScramjetController } = $scramjetLoadController();
         const scramjet = new ScramjetController({
+            prefix: '/service/',
             files: {
                 wasm: `${root}/scram/scramjet.wasm.wasm`,
                 all: `${root}/scram/scramjet.all.js`,
@@ -82,22 +61,17 @@
         });
 
         await scramjet.init();
+        window.scramjet = scramjet; // Make global for search.js
+
         status.innerText = "🚀 System Online";
         status.style.color = "#00ff00";
 
     } catch (err) {
         console.error("Boot Failure:", err);
-        status.innerText = "Repairing Engine... Please wait.";
-        
-        // Final fallback: Clear the specific broken DB and try again
-        await indexedDB.deleteDatabase('__scramjet_db');
-        setTimeout(() => location.reload(), 2000);
+        status.innerText = "Stalled. Check DevTools (F12)";
     }
 }
-
-    window.addEventListener('load', () => {
-        bootNebula();
-    });
+window.addEventListener('load', bootNebula);
 </script>
 </body>
 </html>
